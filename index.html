@@ -48,10 +48,13 @@
 
             // --- START OF NEW CHANGE ---
             
-            // 2. Set the Page Segmentation Mode to 'SINGLE_BLOCK' (PSM 6).
-            // This helps Tesseract treat the page as one column of text.
+            // 2. Set parameters
             await worker.setParameters({
-                tessedit_pageseg_mode: Tesseract.PSM.SINGLE_BLOCK 
+                // Use SINGLE_BLOCK mode
+                tessedit_pageseg_mode: Tesseract.PSM.SINGLE_BLOCK,
+                
+                // Blacklist the characters Tesseract is guessing incorrectly
+                tessedit_char_blacklist: '^5O0|I'
             });
 
             // --- END OF NEW CHANGE ---
