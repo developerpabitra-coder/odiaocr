@@ -43,12 +43,18 @@
             outputEl.innerText = "..."; 
             statusEl.innerText = 'Initializing Tesseract and loading Odia + English models...';
 
-            // --- START OF CHANGE ---
-
-            // 2. Load BOTH 'ori' (Odia) and 'eng' (English) language models.
+            // 1. Load BOTH 'ori' (Odia) and 'eng' (English) language models.
             const worker = await Tesseract.createWorker('ori+eng');
 
-            // --- END OF CHANGE ---
+            // --- START OF NEW CHANGE ---
+            
+            // 2. Set the Page Segmentation Mode to 'SINGLE_BLOCK' (PSM 6).
+            // This helps Tesseract treat the page as one column of text.
+            await worker.setParameters({
+                tessedit_pageseg_mode: Tesseract.PSM.SINGLE_BLOCK 
+            });
+
+            // --- END OF NEW CHANGE ---
 
             try {
                 // 3. Run the OCR process
