@@ -28,13 +28,11 @@
     <div id="output">...</div>
 
     <script>
-        // Get references to our HTML elements
         const imageInput = document.getElementById('imageInput');
         const runButton = document.getElementById('runButton');
         const statusEl = document.getElementById('status');
         const outputEl = document.getElementById('output');
 
-        // This is the main OCR function
         async function performOCR() {
             const file = imageInput.files[0];
             if (!file) {
@@ -42,31 +40,21 @@
                 return;
             }
 
+            outputEl.innerText = "..."; 
+            statusEl.innerText = 'Initializing Tesseract and loading Odia model...';
+
             // --- START OF CHANGES ---
 
-            // We will manually update the status at each step
-            // instead of using the logger.
-            
-            outputEl.innerText = "..."; // Clear previous result
-            statusEl.innerText = 'Initializing Tesseract...';
-
-            // 2. Create a Tesseract worker.
-            // DO NOT pass the logger function in here.
-            const worker = await Tesseract.createWorker();
+            // 2. Create a Tesseract worker AND load the 'ori' (Odia) language.
+            // This single line replaces createWorker, loadLanguage, and initialize.
+            const worker = await Tesseract.createWorker('ori');
 
             try {
-                // 3. Load the Odia language model.
-                statusEl.innerText = "Loading Odia language model (ori)...";
-                await worker.loadLanguage('ori');
-                
-                statusEl.innerText = "Initializing Odia model...";
-                await worker.initialize('ori');
-
-                // 4. Run the OCR process on the user's image.
-                statusEl.innerText = 'Recognizing text... (this may take a moment)';
+                // 3. Run the OCR process (we can skip load/initialize)
+                statusEl.innerText = 'Recognizing text...';
                 const { data: { text } } = await worker.recognize(file);
 
-                // 5. Display the result!
+                // 4. Display the result!
                 statusEl.innerText = 'Done.';
                 outputEl.innerText = text;
 
@@ -76,13 +64,12 @@
                 console.error(err);
                 statusEl.innerText = 'Error: ' + err.message;
             } finally {
-                // 6. Clean up the worker to free up resources.
+                // 5. Clean up the worker.
                 await worker.terminate();
                 console.log('Worker terminated.');
             }
         }
 
-        // Add the click event to the button
         runButton.addEventListener('click', performOCR);
 
     </script>
