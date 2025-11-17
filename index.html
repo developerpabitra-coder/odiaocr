@@ -9,16 +9,42 @@
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.6.347/pdf.min.js"></script>
 
+    <script src="https://unpkg.com/docx@8/build/docx.min.js"></script>
+
     <style>
         body { font-family: sans-serif; padding: 20px; max-width: 600px; margin: auto; }
         #output { border: 1px solid #ccc; padding: 10px; margin-top: 20px; min-height: 100px; background: #f9f9f9; white-space: pre-wrap; }
         #status { font-style: italic; color: #555; }
+
+        /* --- NEW STYLES for download buttons --- */
+        #downloadContainer {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+        .hidden {
+            display: none;
+        }
+        .download-btn {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            margin-right: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .download-btn:hover {
+            background-color: #218838;
+        }
+        /* --- End of NEW STYLES --- */
     </style>
 </head>
 <body>
 
     <h1>Odia Language OCR</h1>
-    <p>Select an image file (PNG, JPG) containing Odia text to extract it.</p>
+    <p>Select an image file (PNG, JPG, PDF) containing Odia text to extract it.</p>
 
     <input type="file" id="imageInput" accept="image/*,application/pdf" />
     <button id="runButton">Recognize Text</button>
@@ -31,109 +57,85 @@
     <h3>Extracted Text:</h3>
     <div id="output">...</div>
 
+    <div id="downloadContainer" class="hidden">
+        <h3>Download Results:</h3>
+        <button id="downloadTxt" class="download-btn">Download as .txt</button>
+        <button id="downloadDocx" class="download-btn">Download as .docx</button>
+    </div>
+
     <script>
+        // Get references to all elements
         const imageInput = document.getElementById('imageInput');
         const runButton = document.getElementById('runButton');
         const statusEl = document.getElementById('status');
         const outputEl = document.getElementById('output');
+        
+        // NEW: Download element references
+        const downloadContainer = document.getElementById('downloadContainer');
+        const downloadTxt = document.getElementById('downloadTxt');
+        const downloadDocx = document.getElementById('downloadDocx');
 
-        // 4. NEW: Tell PDF.js where to find its 'worker' file
+        // Tell PDF.js where to find its 'worker' file
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.6.347/pdf.worker.min.js';
 
-        async function performOCR() {
-            const file = imageInput.files[0];
-            if (!file) {
-                alert("Please select an image file first.");
-                return;
-            }
-
-            outputEl.innerText = "..."; 
-            statusEl.innerText = 'Initializing Tesseract...';
-
-            // --- THIS IS YOUR WORKING CODE ---
-            // We create the worker here.
-            const worker = await Tesseract.createWorker('ori+eng');
-            // --- END OF YOUR WORKING CODE ---
-
-            try {
-                // 5. NEW: Check if the file is a PDF or an Image
-                if (file.type === "application/pdf") {
-                    
-                    statusEl.innerText = 'Loading PDF file...';
-                    const fileReader = new FileReader();
-
-                    fileReader.onload = async function() {
-                        const pdfData = new Uint8Array(this.result);
-                        const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
-                        let fullText = '';
-
-                        // Loop through each page of the PDF
-                        for (let i = 1; i <= pdf.numPages; i++) {
-                            statusEl.innerText = `Recognizing page ${i} of ${pdf.numPages}...`;
-                            const page = await pdf.getPage(i);
-                            const viewport = page.getViewport({ scale: 1.5 }); // Scale up for better OCR
-
-                            // Create a temporary canvas to draw the page on
-                            const canvas = document.createElement('canvas');
-                            const context = canvas.getContext('2d');
-                            canvas.width = viewport.width;
-                            canvas.height = viewport.height;
-                            
-                            await page.render({ canvasContext: context, viewport: viewport }).promise;
-                            
-                            // Run Tesseract on the canvas (which is now an image)
-                            // --- THIS IS YOUR WORKING CODE ---
-                            const { data: { text } } = await worker.recognize(canvas.toDataURL());
-                            fullText += text + '\n\n--- Page Break ---\n\n';
-                            // --- END OF YOUR WORKING CODE ---
-                        }
-                        
-                        // --- THIS IS YOUR WORKING CODE ---
-                        statusEl.innerText = 'Done.';
-                        outputEl.innerText = fullText;
-                        // --- END OF YOUR WORKING CODE ---
-                    };
-                    
-                    fileReader.readAsArrayBuffer(file);
-
-                } else { // It's an image, so run your original code
-                    
-                    statusEl.innerText = 'Recognizing text...';
-                    
-                    // --- THIS IS YOUR WORKING CODE ---
-                    const { data: { text } } = await worker.recognize(file);
-                    statusEl.innerText = 'Done.';
-                    outputEl.innerText = text;
-                    // --- END OF YOUR WORKING CODE ---
-                }
-
-            } catch (err) {
-                console.error(err);
-                statusEl.innerText = 'Error: ' + err.message;
-            } finally {
-                // We no longer put worker.terminate() here,
-                // because the PDF logic finishes at a different time.
-                // It will be terminated in the 'image' branch
-                // or 'pdf' branch logic.
-                
-                // Let's fix that. We need to terminate it properly.
-                // Re-writing the 'try' block to be cleaner.
-            }
+        // 5. NEW: Helper function to trigger file download
+        function downloadFile(blob, filename) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
         }
-        
-        // --- Let's rewrite performOCR to handle termination correctly ---
-        
+
+        // 6. NEW: TXT Download Logic
+        downloadTxt.addEventListener('click', () => {
+            const text = outputEl.innerText;
+            const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+            downloadFile(blob, 'extracted_text.txt');
+        });
+
+        // 7. NEW: DOCX Download Logic
+        downloadDocx.addEventListener('click', () => {
+            const { Document, Packer, Paragraph } = window.docx; // Get tools from docx.js
+            const text = outputEl.innerText;
+            
+            // Convert text with line breaks into separate paragraphs
+            const paragraphs = text.split('\n').map(line => 
+                new Paragraph({
+                    text: line,
+                })
+            );
+
+            // Create a new document
+            const doc = new Document({
+                sections: [{
+                    children: paragraphs
+                }]
+            });
+
+            // Pack the document into a blob and download it
+            Packer.toBlob(doc).then(blob => {
+                downloadFile(blob, 'extracted_text.docx');
+            });
+        });
+
+
+        // This is your main OCR function, modified to show the download buttons
         async function correctPerformOCR() {
             const file = imageInput.files[0];
             if (!file) { alert("Please select an image file first."); return; }
             
             outputEl.innerText = "..."; 
             statusEl.innerText = 'Initializing...';
+            downloadContainer.classList.add('hidden'); // Hide buttons on new run
             
-            let worker = null; // Define worker variable
+            let worker = null; 
             
             try {
-                // Create the worker
+                // This is your approved code:
                 worker = await Tesseract.createWorker('ori+eng');
 
                 if (file.type === "application/pdf") {
@@ -163,12 +165,12 @@
                             
                             statusEl.innerText = 'Done.';
                             outputEl.innerText = fullText;
+                            downloadContainer.classList.remove('hidden'); // Show download buttons
 
                         } catch (err) {
                              console.error('Error during PDF processing:', err);
                              statusEl.innerText = 'Error: ' + err.message;
                         } finally {
-                            // Terminate worker after PDF loop
                             console.log('Terminating worker (PDF)...');
                             await worker.terminate();
                         }
@@ -180,10 +182,11 @@
                     // --- IMAGE LOGIC (YOUR ORIGINAL CODE) ---
                     statusEl.innerText = 'Recognizing text...';
                     const { data: { text } } = await worker.recognize(file);
+                    
                     statusEl.innerText = 'Done.';
                     outputEl.innerText = text;
+                    downloadContainer.classList.remove('hidden'); // Show download buttons
                     
-                    // Terminate worker after image recognition
                     console.log('Terminating worker (Image)...');
                     await worker.terminate();
                 }
@@ -191,14 +194,13 @@
             } catch (err) {
                 console.error('Error:', err);
                 statusEl.innerText = 'Error: ' + err.message;
-                // If worker exists and an error happened, terminate it
                 if (worker) {
                     await worker.terminate();
                 }
             }
         }
 
-        runButton.addEventListener('click', correctPerformOCR); // Use the corrected function
+        runButton.addEventListener('click', correctPerformOCR);
 
     </script>
 
