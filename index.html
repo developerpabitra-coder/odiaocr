@@ -12,11 +12,122 @@
     <script src="https://unpkg.com/docx@8/build/docx.min.js"></script>
 
     <style>
-        body { font-family: sans-serif; padding: 20px; max-width: 600px; margin: auto; }
-        #output { border: 1px solid #ccc; padding: 10px; margin-top: 20px; min-height: 100px; background: #f9f9f9; white-space: pre-wrap; }
-        #status { font-style: italic; color: #555; }
+        /* --- NEW PROFESSIONAL STYLES --- */
 
-        /* --- NEW STYLES for download buttons --- */
+        /* 1. Global & Font Styles */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f4f7f6; /* Light gray background */
+            margin: 0;
+            padding: 40px 20px;
+        }
+
+        /* 2. Main App Container Card */
+        .container {
+            max-width: 700px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            padding: 30px 40px;
+        }
+
+        /* 3. Typography */
+        h1 {
+            text-align: center;
+            color: #222;
+            margin-bottom: 10px;
+        }
+        
+        h3 {
+            color: #333;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 8px;
+            margin-top: 30px;
+        }
+
+        p {
+            text-align: center;
+            color: #666;
+            font-size: 1.1rem;
+            margin-top: 0;
+            margin-bottom: 30px;
+        }
+        
+        /* 4. Input & Button Group */
+        .input-group {
+            display: grid;
+            grid-template-columns: 1fr; /* Full width on small screens */
+            gap: 15px;
+        }
+        
+        /* On larger screens, put file input and button side-by-side */
+        @media (min-width: 600px) {
+            .input-group {
+                grid-template-columns: 2fr 1fr; /* 2/3 for file, 1/3 for button */
+            }
+        }
+
+        /* 5. Custom File Input */
+        #imageInput {
+            display: none; /* Hide the default ugly input */
+        }
+
+        #fileLabel {
+            display: inline-block;
+            width: 100%;
+            padding: 12px 15px;
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            cursor: pointer;
+            color: #555;
+            text-align: center;
+            font-size: 15px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            box-sizing: border-box; /* Fixes padding issues */
+        }
+        #fileLabel:hover {
+            background-color: #f1f1f1;
+        }
+
+        /* 6. Main "Recognize" Button */
+        #runButton {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: background-color 0.2s ease;
+        }
+        #runButton:hover {
+            background-color: #0056b3;
+        }
+        
+        /* 7. Status & Output Box */
+        #status { 
+            font-style: italic; 
+            color: #555; 
+            margin-bottom: 15px;
+        }
+        
+        #output {
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            min-height: 150px;
+            white-space: pre-wrap;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        /* 8. Download Section */
         #downloadContainer {
             margin-top: 20px;
             padding-top: 20px;
@@ -25,60 +136,88 @@
         .hidden {
             display: none;
         }
+        
+        .download-btn-group {
+            display: flex;
+            gap: 10px;
+        }
+        
         .download-btn {
+            flex-grow: 1; /* Make buttons share space */
             background-color: #28a745;
             color: white;
             border: none;
             padding: 10px 15px;
-            margin-right: 10px;
             border-radius: 5px;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 15px;
+            font-weight: 500;
+            transition: background-color 0.2s ease;
         }
         .download-btn:hover {
             background-color: #218838;
         }
+        
         /* --- End of NEW STYLES --- */
     </style>
 </head>
 <body>
 
-    <h1>Odia Language OCR</h1>
-    <p>Select an image file (PNG, JPG, PDF) containing Odia text to extract it.</p>
+    <div class="container">
 
-    <input type="file" id="imageInput" accept="image/*,application/pdf" />
-    <button id="runButton">Recognize Text</button>
+        <h1>Odia Language OCR</h1>
+        <p>Extract text from images (PNG, JPG) and PDFs.</p>
 
-    <hr>
-    
-    <h3>Status:</h3>
-    <div id="status">Ready.</div>
-    
-    <h3>Extracted Text:</h3>
-    <div id="output">...</div>
+        <div class="input-group">
+            <input type="file" id="imageInput" accept="image/*,application/pdf" />
+            <label for="imageInput" id="fileLabel">
+                <span id="fileLabelText">Click to select a file...</span>
+            </label>
+            <button id="runButton">Recognize Text</button>
+        </div>
 
-    <div id="downloadContainer" class="hidden">
-        <h3>Download Results:</h3>
-        <button id="downloadTxt" class="download-btn">Download as .txt</button>
-        <button id="downloadDocx" class="download-btn">Download as .docx</button>
-    </div>
+        <hr style="border: none; border-top: 1px solid #eee; margin-top: 30px;">
+        
+        <h3>Status:</h3>
+        <div id="status">Ready.</div>
+        
+        <h3>Extracted Text:</h3>
+        <div id="output">...</div>
 
-    <script>
+        <div id="downloadContainer" class="hidden">
+            <h3>Download Results:</h3>
+            <div class="download-btn-group">
+                <button id="downloadTxt" class="download-btn">Download as .txt</button>
+                <button id="downloadDocx" class="download-btn">Download as .docx</button>
+            </div>
+        </div>
+
+    </div> <script>
         // Get references to all elements
         const imageInput = document.getElementById('imageInput');
         const runButton = document.getElementById('runButton');
         const statusEl = document.getElementById('status');
         const outputEl = document.getElementById('output');
-        
-        // NEW: Download element references
         const downloadContainer = document.getElementById('downloadContainer');
         const downloadTxt = document.getElementById('downloadTxt');
         const downloadDocx = document.getElementById('downloadDocx');
+        
+        // NEW: Get reference to the file label text
+        const fileLabelText = document.getElementById('fileLabelText');
+
+        // NEW: Update file label text when a file is chosen
+        imageInput.addEventListener('change', () => {
+            if (imageInput.files.length > 0) {
+                fileLabelText.innerText = `File: ${imageInput.files[0].name}`;
+            } else {
+                fileLabelText.innerText = 'Click to select a file...';
+            }
+        });
 
         // Tell PDF.js where to find its 'worker' file
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.6.347/pdf.worker.min.js';
 
-        // 5. NEW: Helper function to trigger file download
+        // --- Helper function to trigger file download (Unchanged) ---
         function downloadFile(blob, filename) {
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -90,47 +229,41 @@
             URL.revokeObjectURL(url);
         }
 
-        // 6. NEW: TXT Download Logic
+        // --- TXT Download Logic (Unchanged) ---
         downloadTxt.addEventListener('click', () => {
             const text = outputEl.innerText;
             const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
             downloadFile(blob, 'extracted_text.txt');
         });
 
-        // 7. NEW: DOCX Download Logic
+        // --- DOCX Download Logic (Unchanged) ---
         downloadDocx.addEventListener('click', () => {
-            const { Document, Packer, Paragraph } = window.docx; // Get tools from docx.js
+            const { Document, Packer, Paragraph } = window.docx;
             const text = outputEl.innerText;
             
-            // Convert text with line breaks into separate paragraphs
             const paragraphs = text.split('\n').map(line => 
-                new Paragraph({
-                    text: line,
-                })
+                new Paragraph({ text: line })
             );
 
-            // Create a new document
             const doc = new Document({
-                sections: [{
-                    children: paragraphs
-                }]
+                sections: [{ children: paragraphs }]
             });
 
-            // Pack the document into a blob and download it
             Packer.toBlob(doc).then(blob => {
                 downloadFile(blob, 'extracted_text.docx');
             });
         });
 
 
-        // This is your main OCR function, modified to show the download buttons
+        // --- Main OCR function (Unchanged, but with UI resets) ---
         async function correctPerformOCR() {
             const file = imageInput.files[0];
             if (!file) { alert("Please select an image file first."); return; }
             
+            // Reset UI for new run
             outputEl.innerText = "..."; 
             statusEl.innerText = 'Initializing...';
-            downloadContainer.classList.add('hidden'); // Hide buttons on new run
+            downloadContainer.classList.add('hidden'); 
             
             let worker = null; 
             
@@ -139,7 +272,7 @@
                 worker = await Tesseract.createWorker('ori+eng');
 
                 if (file.type === "application/pdf") {
-                    // --- PDF LOGIC ---
+                    // --- PDF LOGIC (Unchanged) ---
                     statusEl.innerText = 'Loading PDF file...';
                     const fileReader = new FileReader();
                     
@@ -179,7 +312,7 @@
                     fileReader.readAsArrayBuffer(file);
                     
                 } else {
-                    // --- IMAGE LOGIC (YOUR ORIGINAL CODE) ---
+                    // --- IMAGE LOGIC (YOUR ORIGINAL CODE) (Unchanged) ---
                     statusEl.innerText = 'Recognizing text...';
                     const { data: { text } } = await worker.recognize(file);
                     
