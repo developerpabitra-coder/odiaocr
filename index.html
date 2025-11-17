@@ -42,36 +42,35 @@
                 return;
             }
 
+            // --- START OF CHANGES ---
+
+            // We will manually update the status at each step
+            // instead of using the logger.
+            
+            outputEl.innerText = "..."; // Clear previous result
             statusEl.innerText = 'Initializing Tesseract...';
 
             // 2. Create a Tesseract worker.
-            // This loads the library in the background.
-            const worker = await Tesseract.createWorker({
-                logger: m => {
-                    // Log the progress
-                    console.log(m);
-                    if (m.status === 'recognizing text') {
-                        statusEl.innerText = `Recognizing... ${Math.round(m.progress * 100)}%`;
-                    } else {
-                        statusEl.innerText = m.status;
-                    }
-                }
-            });
+            // DO NOT pass the logger function in here.
+            const worker = await Tesseract.createWorker();
 
             try {
                 // 3. Load the Odia language model.
-                // The language code for Odia is 'ori'.
-                statusEl.innerText = "Loading Odia language model...";
+                statusEl.innerText = "Loading Odia language model (ori)...";
                 await worker.loadLanguage('ori');
+                
+                statusEl.innerText = "Initializing Odia model...";
                 await worker.initialize('ori');
 
                 // 4. Run the OCR process on the user's image.
-                statusEl.innerText = 'Recognizing text...';
+                statusEl.innerText = 'Recognizing text... (this may take a moment)';
                 const { data: { text } } = await worker.recognize(file);
 
                 // 5. Display the result!
                 statusEl.innerText = 'Done.';
                 outputEl.innerText = text;
+
+            // --- END OF CHANGES ---
 
             } catch (err) {
                 console.error(err);
