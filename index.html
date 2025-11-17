@@ -13,7 +13,7 @@
 </head>
 <body>
 
-    <h1>Odia Language OCR</h1>
+    <h1>Odia OCR Detector</h1>
     <p>Select an image file (PNG, JPG) containing Odia text to extract it.</p>
 
     <input type="file" id="imageInput" accept="image/*" />
@@ -43,36 +43,34 @@
             outputEl.innerText = "..."; 
             statusEl.innerText = 'Initializing Tesseract and loading Odia + English models...';
 
-            // 1. Load BOTH 'ori' (Odia) and 'eng' (English) language models.
             const worker = await Tesseract.createWorker('ori+eng');
 
-            // --- START OF NEW CHANGE ---
-            
-            // 2. Set parameters
             await worker.setParameters({
-                // Use SINGLE_BLOCK mode
-                tessedit_pageseg_mode: Tesseract.PSM.SINGLE_BLOCK,
-                
-                // Blacklist the characters Tesseract is guessing incorrectly
-                tessedit_char_blacklist: '^5O0|I'
+                tessedit_pageseg_mode: Tesseract.PSM.SINGLE_COLUMN,
+                tessedit_char_blacklist: '^5O08|I' 
             });
-
-            // --- END OF NEW CHANGE ---
 
             try {
                 // 3. Run the OCR process
                 statusEl.innerText = 'Recognizing text...';
                 const { data: { text } } = await worker.recognize(file);
 
-                // 4. Display the result!
+                // --- START OF NEW CHANGE ---
+                
+                // 4. Clean the text: Remove all (A), (B), (C), (D) patterns
+                const cleanedText = text.replace(/\(\s*[a-dA-D]\s*\)/g, '');
+
+                // --- END OF NEW CHANGE ---
+
+                // 5. Display the cleaned result!
                 statusEl.innerText = 'Done.';
-                outputEl.innerText = text;
+                outputEl.innerText = cleanedText; // Use the new cleanedText variable
 
             } catch (err) {
                 console.error(err);
                 statusEl.innerText = 'Error: ' + err.message;
             } finally {
-                // 5. Clean up the worker.
+                // 6. Clean up the worker.
                 await worker.terminate();
                 console.log('Worker terminated.');
             }
