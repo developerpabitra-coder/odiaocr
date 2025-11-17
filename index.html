@@ -9,53 +9,6 @@
         body { font-family: sans-serif; padding: 20px; max-width: 600px; margin: auto; }
         #output { border: 1px solid #ccc; padding: 10px; margin-top: 20px; min-height: 100px; background: #f9f9f9; white-space: pre-wrap; }
         #status { font-style: italic; color: #555; }
-
-        /* --- NEW CSS FOR DROP ZONE --- */
-
-        /* 1. Hide the ugly default file input */
-        #imageInput {
-            display: none;
-        }
-
-        /* 2. Style the new drop zone label */
-        #dropZone {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            width: 100%;
-            min-height: 150px;
-            border: 2px dashed #ccc;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            cursor: pointer;
-            color: #555;
-            transition: all 0.2s ease;
-        }
-
-        /* 3. Style for when user is dragging a file over the zone */
-        #dropZone.drag-over {
-            background-color: #f0f8ff;
-            border-color: #007bff;
-        }
-
-        /* 4. Style the "Recognize" button */
-        #runButton {
-            display: block;
-            width: 100%;
-            padding: 12px;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            cursor: pointer;
-        }
-        #runButton:hover {
-            background-color: #0056b3;
-        }
-        /* --- END OF NEW CSS --- */
-
     </style>
 </head>
 <body>
@@ -64,14 +17,8 @@
     <p>Select an image file (PNG, JPG) containing Odia text to extract it.</p>
 
     <input type="file" id="imageInput" accept="image/*" />
-
-    <label for="imageInput" id="dropZone">
-        Drag & Drop an image here<br>
-        or click to select a file
-    </label>
-    
     <button id="runButton">Recognize Text</button>
-    
+
     <hr>
     
     <h3>Status:</h3>
@@ -81,57 +28,13 @@
     <div id="output">...</div>
 
     <script>
-        // Get references to our HTML elements
         const imageInput = document.getElementById('imageInput');
         const runButton = document.getElementById('runButton');
         const statusEl = document.getElementById('status');
         const outputEl = document.getElementById('output');
 
-        // --- NEW DRAG/DROP CODE ---
-        const dropZone = document.getElementById('dropZone');
-
-        // Add 'drag-over' class when file is dragged over
-        dropZone.addEventListener('dragover', (event) => {
-            event.preventDefault(); // This is necessary to allow a drop
-            dropZone.classList.add('drag-over');
-        });
-
-        // Remove 'drag-over' class when file leaves
-        dropZone.addEventListener('dragleave', () => {
-            dropZone.classList.remove('drag-over');
-        });
-
-        // Handle the file drop
-        dropZone.addEventListener('drop', (event) => {
-            event.preventDefault();
-            dropZone.classList.remove('drag-over');
-
-            // Get the dropped files
-            const files = event.dataTransfer.files;
-            
-            // Put the file(s) into our hidden input
-            if (files.length > 0) {
-                imageInput.files = files;
-                // Update text to show file was selected
-                dropZone.innerText = `File selected: ${files[0].name}`;
-            }
-        });
-
-        // Also update text if user *clicks* to select a file
-        imageInput.addEventListener('change', () => {
-            if (imageInput.files.length > 0) {
-                dropZone.innerText = `File selected: ${imageInput.files[0].name}`;
-            }
-        });
-        // --- END OF NEW DRAG/DROP CODE ---
-
-
-        // This is the main OCR function (NO CHANGES NEEDED)
         async function performOCR() {
-            // It reads from 'imageInput', which is now populated
-            // by EITHER clicking OR dropping.
             const file = imageInput.files[0];
-            
             if (!file) {
                 alert("Please select an image file first.");
                 return;
@@ -140,20 +43,25 @@
             outputEl.innerText = "..."; 
             statusEl.innerText = 'Initializing Tesseract and loading Odia + English models...';
 
+            // 1. Load BOTH 'ori' (Odia) and 'eng' (English) language models.
             const worker = await Tesseract.createWorker('ori+eng');
 
+            // 2. Set parameters (Single Column + Blacklist)
             await worker.setParameters({
                 tessedit_pageseg_mode: Tesseract.PSM.SINGLE_COLUMN,
-                tessedit_char_blacklist: '^5O08|I' 
+                tessedit_char_blacklist: '^5O08|I' // Blacklist bad characters
             });
 
             try {
+                // 3. Run the OCR process
                 statusEl.innerText = 'Recognizing text...';
                 const { data: { text } } = await worker.recognize(file);
-                
-                // Clean the text: Remove all (A), (B), (C), (D) patterns
+
+                // 4. Clean the text: Remove all (A), (B), (C), (D) patterns
+                // This is the regex that finds (A), (B), etc.
                 const cleanedText = text.replace(/\(\s*[a-dA-D]\s*\)/g, '');
 
+                // 5. Display the cleaned result!
                 statusEl.innerText = 'Done.';
                 outputEl.innerText = cleanedText; 
 
@@ -161,6 +69,7 @@
                 console.error(err);
                 statusEl.innerText = 'Error: ' + err.message;
             } finally {
+                // 6. Clean up the worker.
                 await worker.terminate();
                 console.log('Worker terminated.');
             }
