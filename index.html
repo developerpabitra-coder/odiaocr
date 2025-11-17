@@ -46,7 +46,7 @@
             // 1. Load BOTH 'ori' (Odia) and 'eng' (English) language models.
             const worker = await Tesseract.createWorker('ori+eng');
 
-            // --- FIX 1: ADD THIS BLOCK ---
+            // --- FIX 1: THIS BLOCK IS NEEDED ---
             // This sets the parameters to fix bad characters
             await worker.setParameters({
                 tessedit_pageseg_mode: Tesseract.PSM.SINGLE_COLUMN,
@@ -59,7 +59,7 @@
                 statusEl.innerText = 'Recognizing text...';
                 const { data: { text } } = await worker.recognize(file);
 
-                // --- FIX 2: ADD THIS LINE ---
+                // --- FIX 2: THIS LINE IS NEEDED ---
                 // This removes the (A), (B), (C), (D) options
                 const cleanedText = text.replace(/\(\s*[a-dA-D]\s*\)/g, '');
                 // --- END OF FIX 2 ---
@@ -68,8 +68,8 @@
                 // 4. Display the *cleaned* result!
                 statusEl.innerText = 'Done.';
                 
-                // --- AND CHANGE THIS LINE ---
-                outputEl.innerText = cleanedText; // Use cleanedText, NOT text
+                // --- AND THIS MUST SAY cleanedText ---
+                outputEl.innerText = cleanedText; 
 
             } catch (err) {
                 console.error(err);
