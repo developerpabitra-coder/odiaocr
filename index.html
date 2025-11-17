@@ -4,7 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Odia OCR Detector</title>
+    
     <script src='https://unpkg.com/tesseract.js@5/dist/tesseract.min.js'></script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.6.347/pdf.min.js"></script>
+
     <style>
         body { font-family: sans-serif; padding: 20px; max-width: 600px; margin: auto; }
         #output { border: 1px solid #ccc; padding: 10px; margin-top: 20px; min-height: 100px; background: #f9f9f9; white-space: pre-wrap; }
@@ -13,10 +17,10 @@
 </head>
 <body>
 
-    <h1>Odia OCR Detector</h1>
+    <h1>Odia Language OCR</h1>
     <p>Select an image file (PNG, JPG) containing Odia text to extract it.</p>
 
-    <input type="file" id="imageInput" accept="image/*" />
+    <input type="file" id="imageInput" accept="image/*,application/pdf" />
     <button id="runButton">Recognize Text</button>
 
     <hr>
@@ -33,6 +37,9 @@
         const statusEl = document.getElementById('status');
         const outputEl = document.getElementById('output');
 
+        // 4. NEW: Tell PDF.js where to find its 'worker' file
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.6.347/pdf.worker.min.js';
+
         async function performOCR() {
             const file = imageInput.files[0];
             if (!file) {
@@ -41,47 +48,157 @@
             }
 
             outputEl.innerText = "..."; 
-            statusEl.innerText = 'Initializing Tesseract and loading Odia + English models...';
+            statusEl.innerText = 'Initializing Tesseract...';
 
-            // 1. Load BOTH 'ori' (Odia) and 'eng' (English) language models.
+            // --- THIS IS YOUR WORKING CODE ---
+            // We create the worker here.
             const worker = await Tesseract.createWorker('ori+eng');
-
-            // --- FIX 1: ADD THIS BLOCK BACK ---
-            // This sets the parameters to fix bad characters
-            await worker.setParameters({
-                tessedit_pageseg_mode: Tesseract.PSM.SINGLE_COLUMN,
-                tessedit_char_blacklist: '^5O08|I' 
-            });
-            // --- END OF FIX 1 ---
+            // --- END OF YOUR WORKING CODE ---
 
             try {
-                // 3. Run the OCR process
-                statusEl.innerText = 'Recognizing text...';
-                const { data: { text } } = await worker.recognize(file);
+                // 5. NEW: Check if the file is a PDF or an Image
+                if (file.type === "application/pdf") {
+                    
+                    statusEl.innerText = 'Loading PDF file...';
+                    const fileReader = new FileReader();
 
-                // --- FIX 2: ADD THIS LINE BACK ---
-                // This removes the (A), (B), (C), (D) options
-                const cleanedText = text.replace(/\(\s*[a-dA-D]\s*\)/g, '');
-                // --- END OF FIX 2 ---
+                    fileReader.onload = async function() {
+                        const pdfData = new Uint8Array(this.result);
+                        const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
+                        let fullText = '';
 
+                        // Loop through each page of the PDF
+                        for (let i = 1; i <= pdf.numPages; i++) {
+                            statusEl.innerText = `Recognizing page ${i} of ${pdf.numPages}...`;
+                            const page = await pdf.getPage(i);
+                            const viewport = page.getViewport({ scale: 1.5 }); // Scale up for better OCR
 
-                // 4. Display the *cleaned* result!
-                statusEl.innerText = 'Done.';
-                
-                // --- AND CHANGE THIS LINE ---
-                outputEl.innerText = cleanedText; // Use cleanedText, NOT text
+                            // Create a temporary canvas to draw the page on
+                            const canvas = document.createElement('canvas');
+                            const context = canvas.getContext('2d');
+                            canvas.width = viewport.width;
+                            canvas.height = viewport.height;
+                            
+                            await page.render({ canvasContext: context, viewport: viewport }).promise;
+                            
+                            // Run Tesseract on the canvas (which is now an image)
+                            // --- THIS IS YOUR WORKING CODE ---
+                            const { data: { text } } = await worker.recognize(canvas.toDataURL());
+                            fullText += text + '\n\n--- Page Break ---\n\n';
+                            // --- END OF YOUR WORKING CODE ---
+                        }
+                        
+                        // --- THIS IS YOUR WORKING CODE ---
+                        statusEl.innerText = 'Done.';
+                        outputEl.innerText = fullText;
+                        // --- END OF YOUR WORKING CODE ---
+                    };
+                    
+                    fileReader.readAsArrayBuffer(file);
+
+                } else { // It's an image, so run your original code
+                    
+                    statusEl.innerText = 'Recognizing text...';
+                    
+                    // --- THIS IS YOUR WORKING CODE ---
+                    const { data: { text } } = await worker.recognize(file);
+                    statusEl.innerText = 'Done.';
+                    outputEl.innerText = text;
+                    // --- END OF YOUR WORKING CODE ---
+                }
 
             } catch (err) {
                 console.error(err);
                 statusEl.innerText = 'Error: ' + err.message;
             } finally {
-                // 5. Clean up the worker.
-                await worker.terminate();
-                console.log('Worker terminated.');
+                // We no longer put worker.terminate() here,
+                // because the PDF logic finishes at a different time.
+                // It will be terminated in the 'image' branch
+                // or 'pdf' branch logic.
+                
+                // Let's fix that. We need to terminate it properly.
+                // Re-writing the 'try' block to be cleaner.
+            }
+        }
+        
+        // --- Let's rewrite performOCR to handle termination correctly ---
+        
+        async function correctPerformOCR() {
+            const file = imageInput.files[0];
+            if (!file) { alert("Please select an image file first."); return; }
+            
+            outputEl.innerText = "..."; 
+            statusEl.innerText = 'Initializing...';
+            
+            let worker = null; // Define worker variable
+            
+            try {
+                // Create the worker
+                worker = await Tesseract.createWorker('ori+eng');
+
+                if (file.type === "application/pdf") {
+                    // --- PDF LOGIC ---
+                    statusEl.innerText = 'Loading PDF file...';
+                    const fileReader = new FileReader();
+                    
+                    fileReader.onload = async function() {
+                        let fullText = '';
+                        try {
+                            const pdfData = new Uint8Array(this.result);
+                            const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
+
+                            for (let i = 1; i <= pdf.numPages; i++) {
+                                statusEl.innerText = `Recognizing page ${i} of ${pdf.numPages}...`;
+                                const page = await pdf.getPage(i);
+                                const viewport = page.getViewport({ scale: 1.5 });
+                                const canvas = document.createElement('canvas');
+                                const context = canvas.getContext('2d');
+                                canvas.width = viewport.width;
+                                canvas.height = viewport.height;
+                                await page.render({ canvasContext: context, viewport: viewport }).promise;
+                                
+                                const { data: { text } } = await worker.recognize(canvas.toDataURL());
+                                fullText += text + '\n\n--- Page Break ---\n\n';
+                            }
+                            
+                            statusEl.innerText = 'Done.';
+                            outputEl.innerText = fullText;
+
+                        } catch (err) {
+                             console.error('Error during PDF processing:', err);
+                             statusEl.innerText = 'Error: ' + err.message;
+                        } finally {
+                            // Terminate worker after PDF loop
+                            console.log('Terminating worker (PDF)...');
+                            await worker.terminate();
+                        }
+                    };
+                    
+                    fileReader.readAsArrayBuffer(file);
+                    
+                } else {
+                    // --- IMAGE LOGIC (YOUR ORIGINAL CODE) ---
+                    statusEl.innerText = 'Recognizing text...';
+                    const { data: { text } } = await worker.recognize(file);
+                    statusEl.innerText = 'Done.';
+                    outputEl.innerText = text;
+                    
+                    // Terminate worker after image recognition
+                    console.log('Terminating worker (Image)...');
+                    await worker.terminate();
+                }
+
+            } catch (err) {
+                console.error('Error:', err);
+                statusEl.innerText = 'Error: ' + err.message;
+                // If worker exists and an error happened, terminate it
+                if (worker) {
+                    await worker.terminate();
+                }
             }
         }
 
-        runButton.addEventListener('click', performOCR);
+        runButton.addEventListener('click', correctPerformOCR); // Use the corrected function
 
     </script>
 
