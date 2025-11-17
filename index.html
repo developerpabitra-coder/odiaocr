@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Odia OCR Detector</title>
+    <script src='https://unpkg.com/tesseract.js@5/dist/tesseract.min.js'></script>
+    <style>
+        body { font-family: sans-serif; padding: 20px; max-width: 600px; margin: auto; }
+        #output { border: 1px solid #ccc; padding: 10px; margin-top: 20px; min-height: 100px; background: #f9f9f9; }
+        #status { font-style: italic; color: #555; }
+    </style>
+</head>
+<body>
+
+    <h1>Odia Language OCR</h1>
+    <p>Select an image file (PNG, JPG) containing Odia text to extract it.</p>
+
+    <input type="file" id="imageInput" accept="image/*" />
+    <button id="runButton">Recognize Text</button>
+
+    <hr>
+    
+    <h3>Status:</h3>
+    <div id="status">Ready.</div>
+    
+    <h3>Extracted Text:</h3>
+    <div id="output">...</div>
+
+    <script>
+        // Get references to our HTML elements
+        const imageInput = document.getElementById('imageInput');
+        const runButton = document.getElementById('runButton');
+        const statusEl = document.getElementById('status');
+        const outputEl = document.getElementById('output');
+
+        // This is the main OCR function
+        async function performOCR() {
+            const file = imageInput.files[0];
+            if (!file) {
+                alert("Please select an image file first.");
+                return;
+            }
+
+            statusEl.innerText = 'Initializing Tesseract...';
+
+            // 2. Create a Tesseract worker.
+            // This loads the library in the background.
+            const worker = await Tesseract.createWorker({
+                logger: m => {
+                    // Log the progress
+                    console.log(m);
+                    if (m.status === 'recognizing text') {
+                        statusEl.innerText = `Recognizing... ${Math.round(m.progress * 100)}%`;
+                    } else {
+                        statusEl.innerText = m.status;
+                    }
+                }
+            });
+
+            try {
+                // 3. Load the Odia language model.
+                // The language code for Odia is 'ori'.
+                statusEl.innerText = "Loading Odia language model...";
+                await worker.loadLanguage('ori');
+                await worker.initialize('ori');
+
+                // 4. Run the OCR process on the user's image.
+                statusEl.innerText = 'Recognizing text...';
+                const { data: { text } } = await worker.recognize(file);
+
+                // 5. Display the result!
+                statusEl.innerText = 'Done.';
+                outputEl.innerText = text;
+
+            } catch (err) {
+                console.error(err);
+                statusEl.innerText = 'Error: ' + err.message;
+            } finally {
+                // 6. Clean up the worker to free up resources.
+                await worker.terminate();
+                console.log('Worker terminated.');
+            }
+        }
+
+        // Add the click event to the button
+        runButton.addEventListener('click', performOCR);
+
+    </script>
+
+</body>
+</html>
