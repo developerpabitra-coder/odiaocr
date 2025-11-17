@@ -7,7 +7,7 @@
     <script src='https://unpkg.com/tesseract.js@5/dist/tesseract.min.js'></script>
     <style>
         body { font-family: sans-serif; padding: 20px; max-width: 600px; margin: auto; }
-        #output { border: 1px solid #ccc; padding: 10px; margin-top: 20px; min-height: 100px; background: #f9f9f9; }
+        #output { border: 1px solid #ccc; padding: 10px; margin-top: 20px; min-height: 100px; background: #f9f9f9; white-space: pre-wrap; }
         #status { font-style: italic; color: #555; }
     </style>
 </head>
@@ -41,24 +41,23 @@
             }
 
             outputEl.innerText = "..."; 
-            statusEl.innerText = 'Initializing Tesseract and loading Odia model...';
+            statusEl.innerText = 'Initializing Tesseract and loading Odia + English models...';
 
-            // --- START OF CHANGES ---
+            // --- START OF CHANGE ---
 
-            // 2. Create a Tesseract worker AND load the 'ori' (Odia) language.
-            // This single line replaces createWorker, loadLanguage, and initialize.
-            const worker = await Tesseract.createWorker('ori');
+            // 2. Load BOTH 'ori' (Odia) and 'eng' (English) language models.
+            const worker = await Tesseract.createWorker('ori+eng');
+
+            // --- END OF CHANGE ---
 
             try {
-                // 3. Run the OCR process (we can skip load/initialize)
+                // 3. Run the OCR process
                 statusEl.innerText = 'Recognizing text...';
                 const { data: { text } } = await worker.recognize(file);
 
                 // 4. Display the result!
                 statusEl.innerText = 'Done.';
                 outputEl.innerText = text;
-
-            // --- END OF CHANGES ---
 
             } catch (err) {
                 console.error(err);
