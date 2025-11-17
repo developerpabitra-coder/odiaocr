@@ -92,10 +92,9 @@
         /* 7. Status & Output Box */
         #status { font-style: italic; color: #555; margin-bottom: 15px; }
         
-        /* NEW: Editable Text Area */
         #output {
             width: 100%;
-            box-sizing: border-box; /* Important for textareas */
+            box-sizing: border-box; 
             min-height: 200px;
             background-color: #f9f9f9;
             border: 1px solid #ddd;
@@ -106,7 +105,7 @@
             color: #333;
             font-family: inherit;
             font-size: 1rem;
-            resize: vertical; /* Allow user to resize it */
+            resize: vertical;
         }
 
         /* 8. Download Section */
@@ -126,7 +125,7 @@
         }
         .download-btn:hover { background-color: #218838; }
 
-        /* 9. NEW: Utility Button Group (Copy/Clear) */
+        /* 9. Utility Button Group (Copy/Clear) */
         .utility-btn-group {
             display: flex;
             gap: 10px;
@@ -142,11 +141,11 @@
             cursor: pointer;
             font-size: 14px;
         }
-        .utility-btn.clear { background-color: #dc3545; } /* Red for clear */
+        .utility-btn.clear { background-color: #dc3545; }
         .utility-btn:hover { background-color: #5a6268; }
         .utility-btn.clear:hover { background-color: #c82333; }
         
-        /* 10. NEW: "About" Link & Modal */
+        /* 10. "About" Link & Modal */
         #aboutLink {
             text-align: center;
             margin-top: 30px;
@@ -250,20 +249,19 @@
         const imageInput = document.getElementById('imageInput');
         const runButton = document.getElementById('runButton');
         const statusEl = document.getElementById('status');
-        const outputEl = document.getElementById('output'); // Now a textarea
+        const outputEl = document.getElementById('output');
         const downloadContainer = document.getElementById('downloadContainer');
         const downloadTxt = document.getElementById('downloadTxt');
         const downloadDocx = document.getElementById('downloadDocx');
         const fileLabelText = document.getElementById('fileLabelText');
 
-        // NEW: Utility & Modal elements
+        // Utility & Modal elements
         const copyBtn = document.getElementById('copyBtn');
         const clearBtn = document.getElementById('clearBtn');
         const aboutModal = document.getElementById('aboutModal');
         const openAboutModal = document.getElementById('openAboutModal');
         const closeAboutModal = document.getElementById('closeAboutModal');
         
-
         // Update file label text
         imageInput.addEventListener('change', () => {
             if (imageInput.files.length > 0) {
@@ -276,7 +274,7 @@
         // Tell PDF.js where to find its 'worker' file
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.6.347/pdf.worker.min.js';
 
-        // --- Helper function to trigger file download (Unchanged) ---
+        // --- Helper function to trigger file download ---
         function downloadFile(blob, filename) {
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -288,17 +286,17 @@
             URL.revokeObjectURL(url);
         }
 
-        // --- TXT Download Logic (Unchanged) ---
+        // --- TXT Download Logic ---
         downloadTxt.addEventListener('click', () => {
-            const text = outputEl.value; // Use .value for textarea
+            const text = outputEl.value; 
             const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
             downloadFile(blob, 'extracted_text.txt');
         });
 
-        // --- DOCX Download Logic (Unchanged, but use .value) ---
+        // --- DOCX Download Logic ---
         downloadDocx.addEventListener('click', () => {
             const { Document, Packer, Paragraph } = window.docx;
-            const text = outputEl.value; // Use .value for textarea
+            const text = outputEl.value; 
             
             const paragraphs = text.split('\n').map(line => 
                 new Paragraph({ text: line })
@@ -309,25 +307,22 @@
             });
         });
 
-        // --- NEW: Utility Button Logic ---
-        
-        // Copy Button
+        // --- Utility Button Logic ---
         copyBtn.addEventListener('click', () => {
-            outputEl.select(); // Select text in textarea
+            outputEl.select(); 
             navigator.clipboard.writeText(outputEl.value);
             statusEl.innerText = 'Copied to clipboard!';
         });
 
-        // Clear Button
         clearBtn.addEventListener('click', () => {
-            imageInput.value = null; // Clear the selected file
+            imageInput.value = null; 
             fileLabelText.innerText = 'Click or Paste Image (Ctrl+V)';
-            outputEl.value = ''; // Use .value for textarea
+            outputEl.value = ''; 
             statusEl.innerText = 'Ready.';
             downloadContainer.classList.add('hidden');
         });
 
-        // --- NEW: "About" Modal Logic ---
+        // --- "About" Modal Logic ---
         openAboutModal.addEventListener('click', () => {
             aboutModal.style.display = 'block';
         });
@@ -340,23 +335,16 @@
             }
         });
 
-        // --- NEW: Paste from Clipboard Logic ---
+        // --- Paste from Clipboard Logic ---
         window.addEventListener('paste', (e) => {
-            // Check if the pasted item is a file
             const item = e.clipboardData.items[0];
             if (item.kind === 'file') {
                 const file = item.getAsFile();
                 
-                // Check if it's an image
                 if (file.type.includes('image')) {
-                    // Create a DataTransfer object to hold the file
                     const dataTransfer = new DataTransfer();
                     dataTransfer.items.add(file);
-                    
-                    // Set the file as the input's file
                     imageInput.files = dataTransfer.files;
-                    
-                    // Manually trigger the 'change' event
                     imageInput.dispatchEvent(new Event('change'));
                 } else {
                     statusEl.innerText = 'Pasted file was not an image.';
@@ -365,18 +353,19 @@
         });
 
 
-        // --- Main OCR function (Unchanged, but use .value) ---
+        // --- Main OCR function ---
         async function correctPerformOCR() {
             const file = imageInput.files[0];
             if (!file) { alert("Please select an image file first."); return; }
             
-            outputEl.value = "..."; // Use .value for textarea
+            outputEl.value = "..."; 
             statusEl.innerText = 'Initializing...';
             downloadContainer.classList.add('hidden'); 
             
             let worker = null; 
             
             try {
+                // This is your approved code from earlier:
                 worker = await Tesseract.createWorker('ori+eng');
 
                 if (file.type === "application/pdf") {
@@ -405,7 +394,7 @@
                             }
                             
                             statusEl.innerText = 'Done.';
-                            outputEl.value = fullText; // Use .value for textarea
+                            outputEl.value = fullText; 
                             downloadContainer.classList.remove('hidden');
 
                         } catch (err) {
@@ -425,14 +414,15 @@
                     const { data: { text } } = await worker.recognize(file);
                     
                     statusEl.innerText = 'Done.';
-                    outputEl.value = text; // Use .value for textarea
+                    outputEl.value = text; 
                     downloadContainer.classList.remove('hidden'); 
                     
                     console.log('Terminating worker (Image)...');
                     await worker.terminate();
                 }
 
-            } catch (err) {
+            } catch (err)
+                {
                 console.error('Error:', err);
                 statusEl.innerText = 'Error: ' + err.message;
                 if (worker) {
