@@ -43,33 +43,27 @@
             outputEl.innerText = "..."; 
             statusEl.innerText = 'Initializing Tesseract and loading Odia + English models...';
 
-            // 1. Load BOTH 'ori' (Odia) and 'eng' (English) language models.
+            // --- START OF CHANGE ---
+
+            // 2. Load BOTH 'ori' (Odia) and 'eng' (English) language models.
             const worker = await Tesseract.createWorker('ori+eng');
 
-            // 2. Set parameters (Single Column + Blacklist)
-            await worker.setParameters({
-                tessedit_pageseg_mode: Tesseract.PSM.SINGLE_COLUMN,
-                tessedit_char_blacklist: '^5O08|I' // Blacklist bad characters
-            });
+            // --- END OF CHANGE ---
 
             try {
                 // 3. Run the OCR process
                 statusEl.innerText = 'Recognizing text...';
                 const { data: { text } } = await worker.recognize(file);
 
-                // 4. Clean the text: Remove all (A), (B), (C), (D) patterns
-                // This is the regex that finds (A), (B), etc.
-                const cleanedText = text.replace(/\(\s*[a-dA-D]\s*\)/g, '');
-
-                // 5. Display the cleaned result!
+                // 4. Display the result!
                 statusEl.innerText = 'Done.';
-                outputEl.innerText = cleanedText; 
+                outputEl.innerText = text;
 
             } catch (err) {
                 console.error(err);
                 statusEl.innerText = 'Error: ' + err.message;
             } finally {
-                // 6. Clean up the worker.
+                // 5. Clean up the worker.
                 await worker.terminate();
                 console.log('Worker terminated.');
             }
